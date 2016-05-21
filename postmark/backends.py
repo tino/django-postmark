@@ -183,7 +183,8 @@ class PostmarkBackend(BaseEmailBackend):
             raise
         
         if resp["status"] == "200":
-            post_send.send(sender=self, message=message, response=json.loads(content))
+            post_send.send(sender=self, message=message,
+                           response=json.loads(content.decode('utf-8')))
             return True
         elif resp["status"] == "401":
             if not self.fail_silently:
