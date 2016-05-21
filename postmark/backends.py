@@ -6,13 +6,13 @@ from django.conf import settings
 import httplib2
 
 try:
-    import json                     
+    import json
 except ImportError:
     try:
         import simplejson as json
     except ImportError:
         raise Exception('Cannot use django-postmark without Python 2.6 or greater, or Python 2.4 or 2.5 and the "simplejson" library')
-        
+
 from postmark.signals import post_send
 
 # Settings
@@ -45,7 +45,7 @@ class PostmarkMailUnprocessableEntityException(PostmarkMailSendException):
     details for further information
     """
     pass
-    
+
 class PostmarkMailServerErrorException(PostmarkMailSendException):
     """
     500: Internal error - this is on the Postmark server side.  Errors are
@@ -57,7 +57,7 @@ class PostmarkMessage(dict):
     """
     Creates a Dictionary representation of a Django EmailMessage that is suitable
     for submitting to Postmark's API. An Example Dicitionary would be:
-    
+
         {
             "From" : "sender@example.com",
             "To" : "receiver@example.com",
@@ -83,7 +83,7 @@ class PostmarkMessage(dict):
             ]
         }
     """
-    
+
     def __init__(self, message, fail_silently=False):
         """
         Takes a Django EmailMessage and parses it into a usable object for
@@ -91,61 +91,61 @@ class PostmarkMessage(dict):
         """
         try:
             message_dict = {}
-            
+
             message_dict["From"] = message.from_email
             message_dict["Subject"] = str(message.subject)
             message_dict["TextBody"] = str(message.body)
-            
+
             message_dict["To"] = ",".join(message.to)
-            
+
             if len(message.cc):
                 message_dict["Cc"] = ",".join(message.cc)
             if len(message.bcc):
                 message_dict["Bcc"] = ",".join(message.bcc)
-            
+
             if isinstance(message, EmailMultiAlternatives):
                 for alt in message.alternatives:
                     if alt[1] == "text/html":
                         message_dict["HtmlBody"] = str(alt[0])
-            
+
             if message.extra_headers and isinstance(message.extra_headers, dict):
                 if "Reply-To" in message.extra_headers:
                     message_dict["ReplyTo"] = message.extra_headers.pop("Reply-To")
-                    
+
                 if "X-Postmark-Tag" in message.extra_headers:
                     message_dict["Tag"] = message.extra_headers.pop("X-Postmark-Tag")
-                    
+
                 if len(message.extra_headers):
                     message_dict["Headers"] = [{"Name": x[0], "Value": x[1]} for x in list(message.extra_headers.items())]
-            
+
             if message.attachments and isinstance(message.attachments, list):
                 if len(message.attachments):
                     message_dict["Attachments"] = message.attachments
-            
+
         except:
             if fail_silently:
                 message_dict = {}
             else:
                 raise
-        
+
         super(PostmarkMessage, self).__init__(message_dict)
 
 class PostmarkBackend(BaseEmailBackend):
-    
+
     BATCH_SIZE = 500
-    
+
     def __init__(self, api_key=None, api_url=None, api_batch_url=None, **kwargs):
         """
         Initialize the backend.
         """
         super(PostmarkBackend, self).__init__(**kwargs)
-        
+
         self.api_key = api_key or POSTMARK_API_KEY
         self.api_url = api_url or POSTMARK_API_URL
-        
+
         if self.api_key is None:
             raise ImproperlyConfigured("POSTMARK_API_KEY must be set in Django settings file or passed to backend constructor.")
-    
+
     def send_messages(self, email_messages):
         """
         Sends one or more EmailMessage objects and returns the number of email
@@ -153,21 +153,21 @@ class PostmarkBackend(BaseEmailBackend):
         """
         if not email_messages:
             return
-        
+
         num_sent = 0
         for message in email_messages:
             sent = self._send(PostmarkMessage(message, self.fail_silently))
             if sent:
                 num_sent += 1
         return num_sent
-    
+
     def _send(self, message):
         http = httplib2.Http()
-        
+
         if POSTMARK_TEST_MODE:
             print('JSON message is:\n%s' % json.dumps(message))
             return
-        
+
         try:
             resp, content = http.request(self.api_url,
                 body=json.dumps(message),
@@ -181,7 +181,7 @@ class PostmarkBackend(BaseEmailBackend):
             if not self.fail_silently:
                 return False
             raise
-        
+
         if resp["status"] == "200":
             post_send.send(sender=self, message=message,
                            response=json.loads(content.decode('utf-8')))
@@ -196,5 +196,5 @@ class PostmarkBackend(BaseEmailBackend):
         elif resp["status"] == "500":
             if not self.fail_silently:
                 PostmarkMailServerErrorException()
-        
+
         return False
