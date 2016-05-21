@@ -93,8 +93,8 @@ class PostmarkMessage(dict):
             message_dict = {}
             
             message_dict["From"] = message.from_email
-            message_dict["Subject"] = unicode(message.subject)
-            message_dict["TextBody"] = unicode(message.body)
+            message_dict["Subject"] = str(message.subject)
+            message_dict["TextBody"] = str(message.body)
             
             message_dict["To"] = ",".join(message.to)
             
@@ -106,17 +106,17 @@ class PostmarkMessage(dict):
             if isinstance(message, EmailMultiAlternatives):
                 for alt in message.alternatives:
                     if alt[1] == "text/html":
-                        message_dict["HtmlBody"] = unicode(alt[0])
+                        message_dict["HtmlBody"] = str(alt[0])
             
             if message.extra_headers and isinstance(message.extra_headers, dict):
-                if message.extra_headers.has_key("Reply-To"):
+                if "Reply-To" in message.extra_headers:
                     message_dict["ReplyTo"] = message.extra_headers.pop("Reply-To")
                     
-                if message.extra_headers.has_key("X-Postmark-Tag"):
+                if "X-Postmark-Tag" in message.extra_headers:
                     message_dict["Tag"] = message.extra_headers.pop("X-Postmark-Tag")
                     
                 if len(message.extra_headers):
-                    message_dict["Headers"] = [{"Name": x[0], "Value": x[1]} for x in message.extra_headers.items()]
+                    message_dict["Headers"] = [{"Name": x[0], "Value": x[1]} for x in list(message.extra_headers.items())]
             
             if message.attachments and isinstance(message.attachments, list):
                 if len(message.attachments):
@@ -165,7 +165,7 @@ class PostmarkBackend(BaseEmailBackend):
         http = httplib2.Http()
         
         if POSTMARK_TEST_MODE:
-            print 'JSON message is:\n%s' % json.dumps(message)
+            print('JSON message is:\n%s' % json.dumps(message))
             return
         
         try:

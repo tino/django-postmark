@@ -1,7 +1,7 @@
 from django.utils.translation import ugettext_lazy as _
 from django.dispatch import receiver
 from django.db import models
-from itertools import izip_longest
+from itertools import zip_longest
 from datetime import datetime
 from pytz import timezone
 import pytz
@@ -56,7 +56,7 @@ class EmailMessage(models.Model):
     attachments = models.TextField(_("Attachments"))
     
     def __unicode__(self):
-        return u"%s" % (self.message_id,)
+        return "%s" % (self.message_id,)
     
     class Meta:
         verbose_name = _("email message")
@@ -79,7 +79,7 @@ class EmailBounce(models.Model):
     bounced_at = models.DateTimeField(_("Bounced At"))
     
     def __unicode__(self):
-        return u"Bounce: %s" % (self.message.to,)
+        return "Bounce: %s" % (self.message.to,)
     
     class Meta:
         verbose_name = _("email bounce")
@@ -95,9 +95,9 @@ def sent_message(sender, **kwargs):
     resp = kwargs["response"]
     
     for recipient in (
-        list(izip_longest(msg["To"].split(","), [], fillvalue='to')) +
-        list(izip_longest(msg.get("Cc", "").split(","), [], fillvalue='cc')) +
-        list(izip_longest(msg.get("Bcc", "").split(","), [], fillvalue='bcc'))):
+        list(zip_longest(msg["To"].split(","), [], fillvalue='to')) +
+        list(zip_longest(msg.get("Cc", "").split(","), [], fillvalue='cc')) +
+        list(zip_longest(msg.get("Bcc", "").split(","), [], fillvalue='bcc'))):
         
         if not recipient[0]:
             continue
